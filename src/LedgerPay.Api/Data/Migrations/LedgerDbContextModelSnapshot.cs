@@ -51,6 +51,110 @@ namespace LedgerPay.Api.Data.Migrations
                             OwnerName = "External funding"
                         });
                 });
+
+            modelBuilder.Entity("LedgerPay.Api.Ledger.LedgerEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("account_id");
+
+                    b.Property<long>("Amount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("amount");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("TransferId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("transfer_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TransferId");
+
+                    b.HasIndex("AccountId", "CreatedAt");
+
+                    b.ToTable("ledger_entries", (string)null);
+                });
+
+            modelBuilder.Entity("LedgerPay.Api.Transfers.Transfer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long>("Amount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("amount");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("FromAccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("from_account_id");
+
+                    b.Property<Guid>("ToAccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("to_account_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FromAccountId");
+
+                    b.HasIndex("ToAccountId");
+
+                    b.ToTable("transfers", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_transfers_amount_positive", "amount > 0");
+
+                            t.HasCheckConstraint("ck_transfers_different_accounts", "from_account_id <> to_account_id");
+                        });
+                });
+
+            modelBuilder.Entity("LedgerPay.Api.Ledger.LedgerEntry", b =>
+                {
+                    b.HasOne("LedgerPay.Api.Accounts.Account", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LedgerPay.Api.Transfers.Transfer", null)
+                        .WithMany("Entries")
+                        .HasForeignKey("TransferId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LedgerPay.Api.Transfers.Transfer", b =>
+                {
+                    b.HasOne("LedgerPay.Api.Accounts.Account", null)
+                        .WithMany()
+                        .HasForeignKey("FromAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LedgerPay.Api.Accounts.Account", null)
+                        .WithMany()
+                        .HasForeignKey("ToAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LedgerPay.Api.Transfers.Transfer", b =>
+                {
+                    b.Navigation("Entries");
+                });
 #pragma warning restore 612, 618
         }
     }

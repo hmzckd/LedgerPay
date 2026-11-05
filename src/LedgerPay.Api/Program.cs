@@ -1,5 +1,6 @@
 using LedgerPay.Api.Accounts;
 using LedgerPay.Api.Data;
+using LedgerPay.Api.Transfers;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -23,5 +24,6 @@ app.UseStatusCodePages();
 
 app.MapHealthChecks("/health");
 app.MapAccountEndpoints();
+app.MapTransferEndpoints();
 
 app.Run();

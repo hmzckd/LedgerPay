@@ -14,6 +14,7 @@ public class LedgerPayApiFactory : WebApplicationFactory<Program>, IAsyncLifetim
     public async ValueTask InitializeAsync()
     {
         await _postgres.StartAsync();
+        StartServer();
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
