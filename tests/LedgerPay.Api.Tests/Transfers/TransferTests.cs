@@ -170,6 +170,34 @@ public class TransferTests(LedgerPayApiFactory factory)
         Assert.Equal(1234, transfer?.Amount);
     }
 
+    [Fact]
+    public async Task Transfers_sent_at_the_same_time_cannot_spend_the_same_money_twice()
+    {
+        var ali = await OpenAccountWith(10000);
+        var ayse = await OpenAccountWith(0);
+
+        var responses = await Task.WhenAll(Enumerable.Range(0, 10).Select(_ => PostTransfer(ali.Id, ayse.Id, 8000)));
+
+        Assert.Single(responses, r => r.StatusCode == HttpStatusCode.Created);
+        Assert.Equal(9, responses.Count(r => r.StatusCode == HttpStatusCode.Conflict));
+        Assert.Equal(2000, await BalanceOf(ali.Id));
+        Assert.Equal(8000, await BalanceOf(ayse.Id));
+    }
+
+    [Fact]
+    public async Task Opposite_transfers_at_the_same_time_do_not_block_each_other()
+    {
+        var ali = await OpenAccountWith(10000);
+        var ayse = await OpenAccountWith(10000);
+
+        var responses = await Task.WhenAll(Enumerable.Range(0, 10).Select(i =>
+            i % 2 == 0 ? PostTransfer(ali.Id, ayse.Id, 100) : PostTransfer(ayse.Id, ali.Id, 100)));
+
+        Assert.All(responses, r => Assert.Equal(HttpStatusCode.Created, r.StatusCode));
+        Assert.Equal(10000, await BalanceOf(ali.Id));
+        Assert.Equal(10000, await BalanceOf(ayse.Id));
+    }
+
     private async Task<AccountResponse> OpenAccountWith(long balance)
     {
         var response = await _client.PostAsJsonAsync("/api/accounts", new { ownerName = "Test Owner" }, _ct);

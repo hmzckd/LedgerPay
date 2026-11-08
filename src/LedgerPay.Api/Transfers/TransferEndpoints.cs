@@ -36,6 +36,10 @@ public static class TransferEndpoints
             }
         }
 
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        await db.Database.ExecuteSqlAsync(
+            $"SELECT 1 FROM accounts WHERE id = {request.FromAccountId} FOR NO KEY UPDATE", ct);
+
         var balance = await db.BalanceOfAsync(request.FromAccountId, ct);
         if (balance < request.Amount)
         {
@@ -45,6 +49,7 @@ public static class TransferEndpoints
         var transfer = Transfer.Create(request.FromAccountId, request.ToAccountId, request.Amount, clock);
         db.Transfers.Add(transfer);
         await db.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
 
         return TypedResults.Created($"/api/transfers/{transfer.Id}", TransferResponse.From(transfer));
     }
