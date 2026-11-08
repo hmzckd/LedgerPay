@@ -21,4 +21,17 @@ public static class Problems
             title: "Cannot transfer to the same account",
             detail: "The sender and the receiver must be different accounts.",
             statusCode: StatusCodes.Status400BadRequest);
+
+    public static ProblemHttpResult ExternalFundingNotAllowed() =>
+        TypedResults.Problem(
+            title: "External funding account not allowed",
+            detail: "Money enters LedgerPay only through deposits, so transfers cannot use the external funding account.",
+            statusCode: StatusCodes.Status400BadRequest);
+
+    public static ProblemHttpResult InsufficientFunds(Guid accountId) =>
+        TypedResults.Problem(
+            type: "insufficient-funds",
+            title: "Insufficient funds",
+            detail: $"The balance of account {accountId} is lower than the amount.",
+            statusCode: StatusCodes.Status409Conflict);
 }
