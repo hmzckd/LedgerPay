@@ -2,6 +2,7 @@ using LedgerPay.Api.Data;
 using LedgerPay.Api.Ledger;
 using LedgerPay.Api.Transfers;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace LedgerPay.Api.Accounts;
@@ -60,8 +61,23 @@ public static class AccountEndpoints
     }
 
     private static async Task<Results<Created<TransferResponse>, ProblemHttpResult>> Deposit(
-        Guid id, DepositRequest request, LedgerDbContext db, TimeProvider clock, CancellationToken ct)
+        Guid id,
+        DepositRequest request,
+        [FromHeader(Name = Idempotency.KeyHeader)] string? idempotencyKey,
+        LedgerDbContext db, TimeProvider clock, HttpResponse response, CancellationToken ct)
     {
+        if (string.IsNullOrWhiteSpace(idempotencyKey) || idempotencyKey.Length > Idempotency.MaxKeyLength)
+        {
+            return Problems.InvalidIdempotencyKey();
+        }
+
+        var replay = await db.TryReplayAsync(
+            idempotencyKey, Account.ExternalFundingId, id, request.Amount, response, ct);
+        if (replay is not null)
+        {
+            return replay;
+        }
+
         if (id == Account.ExternalFundingId)
         {
             return Problems.SameAccount();
@@ -72,9 +88,17 @@ public static class AccountEndpoints
             return Problems.AccountNotFound(id);
         }
 
-        var transfer = Transfer.Create(Account.ExternalFundingId, id, request.Amount, clock);
+        var transfer = Transfer.Create(Account.ExternalFundingId, id, request.Amount, idempotencyKey, clock);
         db.Transfers.Add(transfer);
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException e) when (e.IsUniqueViolation())
+        {
+            return (await db.TryReplayAsync(
+                idempotencyKey, Account.ExternalFundingId, id, request.Amount, response, ct))!;
+        }
 
         return TypedResults.Created($"/api/transfers/{transfer.Id}", TransferResponse.From(transfer));
     }

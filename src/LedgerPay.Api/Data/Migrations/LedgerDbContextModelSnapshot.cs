@@ -103,6 +103,12 @@ namespace LedgerPay.Api.Data.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("from_account_id");
 
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("idempotency_key");
+
                     b.Property<Guid>("ToAccountId")
                         .HasColumnType("uuid")
                         .HasColumnName("to_account_id");
@@ -110,6 +116,9 @@ namespace LedgerPay.Api.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("FromAccountId");
+
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique();
 
                     b.HasIndex("ToAccountId");
 

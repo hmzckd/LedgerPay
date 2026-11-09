@@ -2,6 +2,7 @@ using LedgerPay.Api.Accounts;
 using LedgerPay.Api.Data;
 using LedgerPay.Api.Ledger;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace LedgerPay.Api.Transfers;
@@ -16,8 +17,22 @@ public static class TransferEndpoints
     }
 
     private static async Task<Results<Created<TransferResponse>, ProblemHttpResult>> Send(
-        TransferRequest request, LedgerDbContext db, TimeProvider clock, CancellationToken ct)
+        TransferRequest request,
+        [FromHeader(Name = Idempotency.KeyHeader)] string? idempotencyKey,
+        LedgerDbContext db, TimeProvider clock, HttpResponse response, CancellationToken ct)
     {
+        if (string.IsNullOrWhiteSpace(idempotencyKey) || idempotencyKey.Length > Idempotency.MaxKeyLength)
+        {
+            return Problems.InvalidIdempotencyKey();
+        }
+
+        var replay = await db.TryReplayAsync(
+            idempotencyKey, request.FromAccountId, request.ToAccountId, request.Amount, response, ct);
+        if (replay is not null)
+        {
+            return replay;
+        }
+
         if (request.FromAccountId == request.ToAccountId)
         {
             return Problems.SameAccount();
@@ -40,15 +55,26 @@ public static class TransferEndpoints
         await db.Database.ExecuteSqlAsync(
             $"SELECT 1 FROM accounts WHERE id = {request.FromAccountId} FOR NO KEY UPDATE", ct);
 
+        var transfer = Transfer.Create(
+            request.FromAccountId, request.ToAccountId, request.Amount, idempotencyKey, clock);
+        db.Transfers.Add(transfer);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException e) when (e.IsUniqueViolation())
+        {
+            await transaction.RollbackAsync(ct);
+            return (await db.TryReplayAsync(
+                idempotencyKey, request.FromAccountId, request.ToAccountId, request.Amount, response, ct))!;
+        }
+
         var balance = await db.BalanceOfAsync(request.FromAccountId, ct);
-        if (balance < request.Amount)
+        if (balance < 0)
         {
             return Problems.InsufficientFunds(request.FromAccountId);
         }
 
-        var transfer = Transfer.Create(request.FromAccountId, request.ToAccountId, request.Amount, clock);
-        db.Transfers.Add(transfer);
-        await db.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
 
         return TypedResults.Created($"/api/transfers/{transfer.Id}", TransferResponse.From(transfer));

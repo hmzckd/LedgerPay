@@ -20,7 +20,7 @@ public class DepositTests(LedgerPayApiFactory factory)
     {
         var account = await OpenAccount();
 
-        var response = await _client.PostAsJsonAsync($"/api/accounts/{account.Id}/deposits", new { amount = 10000 }, _ct);
+        var response = await _client.PostWithKeyAsync($"/api/accounts/{account.Id}/deposits", new { amount = 10000 }, _ct);
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var transfer = await response.Content.ReadFromJsonAsync<TransferResponse>(_ct);
@@ -93,7 +93,7 @@ public class DepositTests(LedgerPayApiFactory factory)
     {
         var account = await OpenAccount();
 
-        var response = await _client.PostAsJsonAsync($"/api/accounts/{account.Id}/deposits", new { amount }, _ct);
+        var response = await _client.PostWithKeyAsync($"/api/accounts/{account.Id}/deposits", new { amount }, _ct);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal(0, (await GetAccount(account.Id)).Balance);
@@ -102,7 +102,7 @@ public class DepositTests(LedgerPayApiFactory factory)
     [Fact]
     public async Task A_deposit_into_an_unknown_account_returns_404()
     {
-        var response = await _client.PostAsJsonAsync(
+        var response = await _client.PostWithKeyAsync(
             $"/api/accounts/{Guid.CreateVersion7()}/deposits", new { amount = 100 }, _ct);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -112,7 +112,7 @@ public class DepositTests(LedgerPayApiFactory factory)
     [Fact]
     public async Task A_deposit_into_the_external_funding_account_returns_400()
     {
-        var response = await _client.PostAsJsonAsync(
+        var response = await _client.PostWithKeyAsync(
             $"/api/accounts/{ExternalFundingId}/deposits", new { amount = 100 }, _ct);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -158,7 +158,7 @@ public class DepositTests(LedgerPayApiFactory factory)
 
     private async Task<TransferResponse> Deposit(Guid accountId, long amount)
     {
-        var response = await _client.PostAsJsonAsync($"/api/accounts/{accountId}/deposits", new { amount }, _ct);
+        var response = await _client.PostWithKeyAsync($"/api/accounts/{accountId}/deposits", new { amount }, _ct);
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<TransferResponse>(_ct))!;
     }

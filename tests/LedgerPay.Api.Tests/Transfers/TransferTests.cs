@@ -205,7 +205,7 @@ public class TransferTests(LedgerPayApiFactory factory)
         var account = (await response.Content.ReadFromJsonAsync<AccountResponse>(_ct))!;
         if (balance > 0)
         {
-            var deposit = await _client.PostAsJsonAsync($"/api/accounts/{account.Id}/deposits", new { amount = balance }, _ct);
+            var deposit = await _client.PostWithKeyAsync($"/api/accounts/{account.Id}/deposits", new { amount = balance }, _ct);
             deposit.EnsureSuccessStatusCode();
         }
 
@@ -213,7 +213,7 @@ public class TransferTests(LedgerPayApiFactory factory)
     }
 
     private Task<HttpResponseMessage> PostTransfer(Guid from, Guid to, long amount) =>
-        _client.PostAsJsonAsync("/api/transfers", new { fromAccountId = from, toAccountId = to, amount }, _ct);
+        _client.PostWithKeyAsync("/api/transfers", new { fromAccountId = from, toAccountId = to, amount }, _ct);
 
     private async Task<TransferResponse> Transfer(Guid from, Guid to, long amount)
     {

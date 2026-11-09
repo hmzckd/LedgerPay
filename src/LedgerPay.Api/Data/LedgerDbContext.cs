@@ -38,6 +38,8 @@ public class LedgerDbContext(DbContextOptions<LedgerDbContext> options) : DbCont
             transfer.Property(t => t.FromAccountId).HasColumnName("from_account_id");
             transfer.Property(t => t.ToAccountId).HasColumnName("to_account_id");
             transfer.Property(t => t.Amount).HasColumnName("amount");
+            transfer.Property(t => t.IdempotencyKey).HasColumnName("idempotency_key").HasMaxLength(Idempotency.MaxKeyLength);
+            transfer.HasIndex(t => t.IdempotencyKey).IsUnique();
             transfer.Property(t => t.CreatedAt).HasColumnName("created_at");
             transfer.HasOne<Account>().WithMany().HasForeignKey(t => t.FromAccountId).OnDelete(DeleteBehavior.Restrict);
             transfer.HasOne<Account>().WithMany().HasForeignKey(t => t.ToAccountId).OnDelete(DeleteBehavior.Restrict);

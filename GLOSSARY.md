@@ -47,3 +47,7 @@ _Avoid_: Top-up, load
 **Amount**:
 A positive sum of Turkish lira, counted in kuruş (one hundredth of a lira).
 _Avoid_: Value, sum, money
+
+**Idempotency key**:
+A text the client chooses and sends with every deposit and transfer. A request sent again with the same key moves no more money and gets back the transfer the first request created.
+_Avoid_: Request id, dedup key

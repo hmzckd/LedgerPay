@@ -34,4 +34,17 @@ public static class Problems
             title: "Insufficient funds",
             detail: $"The balance of account {accountId} is lower than the amount.",
             statusCode: StatusCodes.Status409Conflict);
+
+    public static ProblemHttpResult InvalidIdempotencyKey() =>
+        TypedResults.Problem(
+            title: "Invalid Idempotency-Key header",
+            detail: "Every deposit and transfer needs an Idempotency-Key header of 1 to 255 characters.",
+            statusCode: StatusCodes.Status400BadRequest);
+
+    public static ProblemHttpResult IdempotencyKeyReused() =>
+        TypedResults.Problem(
+            type: "idempotency-key-reused",
+            title: "Idempotency key already used",
+            detail: "This Idempotency-Key was already used for a request with other accounts or another amount.",
+            statusCode: StatusCodes.Status422UnprocessableEntity);
 }
