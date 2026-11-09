@@ -1,5 +1,6 @@
 using LedgerPay.Api.Accounts;
 using LedgerPay.Api.Ledger;
+using LedgerPay.Api.Outbox;
 using LedgerPay.Api.Transfers;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,6 +11,7 @@ public class LedgerDbContext(DbContextOptions<LedgerDbContext> options) : DbCont
     public DbSet<Account> Accounts => Set<Account>();
     public DbSet<Transfer> Transfers => Set<Transfer>();
     public DbSet<LedgerEntry> LedgerEntries => Set<LedgerEntry>();
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -57,6 +59,20 @@ public class LedgerDbContext(DbContextOptions<LedgerDbContext> options) : DbCont
             entry.Property(e => e.CreatedAt).HasColumnName("created_at");
             entry.HasOne<Account>().WithMany().HasForeignKey(e => e.AccountId).OnDelete(DeleteBehavior.Restrict);
             entry.HasIndex(e => new { e.AccountId, e.CreatedAt });
+        });
+
+        modelBuilder.Entity<OutboxMessage>(message =>
+        {
+            message.ToTable("outbox_messages");
+            message.HasKey(m => m.Id);
+            message.Property(m => m.Id).HasColumnName("id");
+            message.Property(m => m.Type).HasColumnName("type").HasMaxLength(100);
+            message.Property(m => m.Payload).HasColumnName("payload").HasColumnType("jsonb");
+            message.Property(m => m.CreatedAt).HasColumnName("created_at");
+            message.Property(m => m.SentAt).HasColumnName("sent_at");
+            message.Property(m => m.Attempts).HasColumnName("attempts");
+            message.Property(m => m.LastError).HasColumnName("last_error");
+            message.HasIndex(m => new { m.CreatedAt, m.Id }).HasFilter("sent_at IS NULL");
         });
     }
 }

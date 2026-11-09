@@ -1,5 +1,6 @@
 using LedgerPay.Api.Data;
 using LedgerPay.Api.Ledger;
+using LedgerPay.Api.Outbox;
 using LedgerPay.Api.Transfers;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -90,6 +91,7 @@ public static class AccountEndpoints
 
         var transfer = Transfer.Create(Account.ExternalFundingId, id, request.Amount, idempotencyKey, clock);
         db.Transfers.Add(transfer);
+        db.OutboxMessages.Add(OutboxMessage.ForCompletedTransfer(transfer));
         try
         {
             await db.SaveChangesAsync(ct);

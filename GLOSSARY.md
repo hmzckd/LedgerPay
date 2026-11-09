@@ -51,3 +51,9 @@ _Avoid_: Value, sum, money
 **Idempotency key**:
 A text the client chooses and sends with every deposit and transfer. A request sent again with the same key moves no more money and gets back the transfer the first request created.
 _Avoid_: Request id, dedup key
+
+### Events
+
+**Transfer completed**:
+The event that says a transfer has been written to the ledger. Other services learn about every transfer, deposits included, from this event.
+_Avoid_: Transfer created, payment sent

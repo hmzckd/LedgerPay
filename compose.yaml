@@ -10,5 +10,14 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
 
+  rabbitmq:
+    image: rabbitmq:4.2-management
+    environment:
+      RABBITMQ_DEFAULT_USER: ledgerpay
+      RABBITMQ_DEFAULT_PASS: ledgerpay
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
 volumes:
   postgres-data:
