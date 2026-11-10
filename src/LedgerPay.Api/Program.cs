@@ -1,7 +1,9 @@
 using LedgerPay.Api.Accounts;
 using LedgerPay.Api.Data;
 using LedgerPay.Api.Outbox;
+using LedgerPay.Api.Risk;
 using LedgerPay.Api.Transfers;
+using LedgerPay.Risk.V1;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,6 +17,11 @@ builder.Services.AddHealthChecks().AddDbContextCheck<LedgerDbContext>();
 builder.Services.AddSingleton<RabbitMqPublisher>();
 builder.Services.AddSingleton<OutboxRelay>();
 builder.Services.AddHostedService(services => services.GetRequiredService<OutboxRelay>());
+
+var riskAddress = builder.Configuration["Risk:Address"]
+    ?? throw new InvalidOperationException("Risk:Address is not set.");
+builder.Services.AddGrpcClient<RiskCheck.RiskCheckClient>(options => options.Address = new Uri(riskAddress));
+builder.Services.AddScoped<RiskChecker>();
 
 var app = builder.Build();
 

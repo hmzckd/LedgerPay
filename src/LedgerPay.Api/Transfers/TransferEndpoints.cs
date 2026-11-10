@@ -2,6 +2,7 @@ using LedgerPay.Api.Accounts;
 using LedgerPay.Api.Data;
 using LedgerPay.Api.Ledger;
 using LedgerPay.Api.Outbox;
+using LedgerPay.Api.Risk;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -20,7 +21,7 @@ public static class TransferEndpoints
     private static async Task<Results<Created<TransferResponse>, ProblemHttpResult>> Send(
         TransferRequest request,
         [FromHeader(Name = Idempotency.KeyHeader)] string? idempotencyKey,
-        LedgerDbContext db, TimeProvider clock, HttpResponse response, CancellationToken ct)
+        LedgerDbContext db, RiskChecker risk, TimeProvider clock, HttpResponse response, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(idempotencyKey) || idempotencyKey.Length > Idempotency.MaxKeyLength)
         {
@@ -50,6 +51,12 @@ public static class TransferEndpoints
             {
                 return Problems.AccountNotFound(accountId);
             }
+        }
+
+        var riskProblem = await risk.CheckAsync(request.FromAccountId, request.ToAccountId, request.Amount, ct);
+        if (riskProblem is not null)
+        {
+            return riskProblem;
         }
 
         await using var transaction = await db.Database.BeginTransactionAsync(ct);

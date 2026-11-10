@@ -47,4 +47,18 @@ public static class Problems
             title: "Idempotency key already used",
             detail: "This Idempotency-Key was already used for a request with other accounts or another amount.",
             statusCode: StatusCodes.Status422UnprocessableEntity);
+
+    public static ProblemHttpResult RiskRejected(string reason) =>
+        TypedResults.Problem(
+            type: "risk-rejected",
+            title: "Rejected by the risk check",
+            detail: reason,
+            statusCode: StatusCodes.Status422UnprocessableEntity);
+
+    public static ProblemHttpResult RiskUnavailable() =>
+        TypedResults.Problem(
+            type: "risk-unavailable",
+            title: "Risk check unavailable",
+            detail: "The risk check gave no answer, so no money moved. Try again later with the same Idempotency-Key.",
+            statusCode: StatusCodes.Status503ServiceUnavailable);
 }

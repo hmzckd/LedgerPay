@@ -2,9 +2,11 @@
   <Folder Name="/src/">
     <Project Path="src/LedgerPay.Api/LedgerPay.Api.csproj" />
     <Project Path="src/LedgerPay.Notifications/LedgerPay.Notifications.csproj" />
+    <Project Path="src/LedgerPay.Risk/LedgerPay.Risk.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/LedgerPay.Api.Tests/LedgerPay.Api.Tests.csproj" />
     <Project Path="tests/LedgerPay.Notifications.Tests/LedgerPay.Notifications.Tests.csproj" />
+    <Project Path="tests/LedgerPay.Risk.Tests/LedgerPay.Risk.Tests.csproj" />
   </Folder>
 </Solution>

@@ -52,6 +52,10 @@ _Avoid_: Value, sum, money
 A text the client chooses and sends with every deposit and transfer. A request sent again with the same key moves no more money and gets back the transfer the first request created.
 _Avoid_: Request id, dedup key
 
+**Risk check**:
+The question LedgerPay asks the risk service before every deposit and transfer: may this money move? If the risk check says no, or gives no answer in time, no money moves.
+_Avoid_: Fraud check, validation
+
 ### Events
 
 **Transfer completed**:

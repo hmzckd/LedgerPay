@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package ledgerpay.risk.v1;
+
+option csharp_namespace = "LedgerPay.Risk.V1";
+
+service RiskCheck {
+  rpc CheckTransfer (CheckTransferRequest) returns (CheckTransferResponse);
+}
+
+message CheckTransferRequest {
+  string from_account_id = 1;
+  string to_account_id = 2;
+  int64 amount = 3;
+}
+
+message CheckTransferResponse {
+  Decision decision = 1;
+  string reason = 2;
+}
+
+enum Decision {
+  DECISION_UNSPECIFIED = 0;
+  DECISION_APPROVED = 1;
+  DECISION_REJECTED = 2;
+}

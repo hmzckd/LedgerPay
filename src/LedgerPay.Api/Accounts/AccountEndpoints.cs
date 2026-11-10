@@ -1,6 +1,7 @@
 using LedgerPay.Api.Data;
 using LedgerPay.Api.Ledger;
 using LedgerPay.Api.Outbox;
+using LedgerPay.Api.Risk;
 using LedgerPay.Api.Transfers;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -65,7 +66,7 @@ public static class AccountEndpoints
         Guid id,
         DepositRequest request,
         [FromHeader(Name = Idempotency.KeyHeader)] string? idempotencyKey,
-        LedgerDbContext db, TimeProvider clock, HttpResponse response, CancellationToken ct)
+        LedgerDbContext db, RiskChecker risk, TimeProvider clock, HttpResponse response, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(idempotencyKey) || idempotencyKey.Length > Idempotency.MaxKeyLength)
         {
@@ -87,6 +88,12 @@ public static class AccountEndpoints
         if (!await db.Accounts.AnyAsync(a => a.Id == id, ct))
         {
             return Problems.AccountNotFound(id);
+        }
+
+        var riskProblem = await risk.CheckAsync(Account.ExternalFundingId, id, request.Amount, ct);
+        if (riskProblem is not null)
+        {
+            return riskProblem;
         }
 
         var transfer = Transfer.Create(Account.ExternalFundingId, id, request.Amount, idempotencyKey, clock);

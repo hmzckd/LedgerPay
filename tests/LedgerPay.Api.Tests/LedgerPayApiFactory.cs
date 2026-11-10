@@ -1,5 +1,9 @@
+using LedgerPay.Risk.V1;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Testcontainers.PostgreSql;
 using Testcontainers.RabbitMq;
 using Xunit;
@@ -15,6 +19,8 @@ public class LedgerPayApiFactory : WebApplicationFactory<Program>, IAsyncLifetim
 
     public string RabbitMqConnectionString => _rabbitMq.GetConnectionString();
 
+    public FakeRiskClient Risk { get; } = new();
+
     public async ValueTask InitializeAsync()
     {
         await Task.WhenAll(_postgres.StartAsync(), _rabbitMq.StartAsync());
@@ -26,6 +32,11 @@ public class LedgerPayApiFactory : WebApplicationFactory<Program>, IAsyncLifetim
         builder.UseSetting("ConnectionStrings:Ledger", _postgres.GetConnectionString());
         builder.UseSetting("ConnectionStrings:RabbitMq", _rabbitMq.GetConnectionString());
         builder.UseSetting("Outbox:RelayEnabled", "false");
+        builder.ConfigureTestServices(services =>
+        {
+            services.RemoveAll<RiskCheck.RiskCheckClient>();
+            services.AddSingleton<RiskCheck.RiskCheckClient>(Risk);
+        });
     }
 
     public override async ValueTask DisposeAsync()
