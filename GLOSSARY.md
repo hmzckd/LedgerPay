@@ -57,3 +57,7 @@ _Avoid_: Request id, dedup key
 **Transfer completed**:
 The event that says a transfer has been written to the ledger. Other services learn about every transfer, deposits included, from this event.
 _Avoid_: Transfer created, payment sent
+
+**Notification**:
+A short message that tells an owner that money arrived in one of their accounts. Each transfer completed event gives at most one notification.
+_Avoid_: Alert, push, message
