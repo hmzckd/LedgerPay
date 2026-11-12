@@ -61,4 +61,16 @@ public static class Problems
             title: "Risk check unavailable",
             detail: "The risk check gave no answer, so no money moved. Try again later with the same Idempotency-Key.",
             statusCode: StatusCodes.Status503ServiceUnavailable);
+
+    public static ProblemHttpResult ReconciliationDayInTheFuture(DateOnly day) =>
+        TypedResults.Problem(
+            title: "Day is in the future",
+            detail: $"{day:O} has not happened yet, so it cannot be reconciled.",
+            statusCode: StatusCodes.Status400BadRequest);
+
+    public static ProblemHttpResult NoReconciliationRun() =>
+        TypedResults.Problem(
+            title: "No reconciliation run yet",
+            detail: "Reconciliation has not run yet. Start a run with POST /api/reconciliation-runs.",
+            statusCode: StatusCodes.Status404NotFound);
 }

@@ -1,6 +1,7 @@
 using LedgerPay.Api.Accounts;
 using LedgerPay.Api.Ledger;
 using LedgerPay.Api.Outbox;
+using LedgerPay.Api.Reconciliation;
 using LedgerPay.Api.Transfers;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,6 +13,7 @@ public class LedgerDbContext(DbContextOptions<LedgerDbContext> options) : DbCont
     public DbSet<Transfer> Transfers => Set<Transfer>();
     public DbSet<LedgerEntry> LedgerEntries => Set<LedgerEntry>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+    public DbSet<ReconciliationRun> ReconciliationRuns => Set<ReconciliationRun>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -73,6 +75,18 @@ public class LedgerDbContext(DbContextOptions<LedgerDbContext> options) : DbCont
             message.Property(m => m.Attempts).HasColumnName("attempts");
             message.Property(m => m.LastError).HasColumnName("last_error");
             message.HasIndex(m => new { m.CreatedAt, m.Id }).HasFilter("sent_at IS NULL");
+        });
+
+        modelBuilder.Entity<ReconciliationRun>(run =>
+        {
+            run.ToTable("reconciliation_runs");
+            run.HasKey(r => r.Id);
+            run.Property(r => r.Id).HasColumnName("id");
+            run.Property(r => r.Day).HasColumnName("day");
+            run.Property(r => r.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(20);
+            run.Property(r => r.Problems).HasColumnName("problems");
+            run.Property(r => r.StartedAt).HasColumnName("started_at");
+            run.Property(r => r.FinishedAt).HasColumnName("finished_at");
         });
     }
 }

@@ -1,6 +1,7 @@
 using LedgerPay.Api.Accounts;
 using LedgerPay.Api.Data;
 using LedgerPay.Api.Outbox;
+using LedgerPay.Api.Reconciliation;
 using LedgerPay.Api.Risk;
 using LedgerPay.Api.Transfers;
 using LedgerPay.Risk.V1;
@@ -22,6 +23,7 @@ var riskAddress = builder.Configuration["Risk:Address"]
     ?? throw new InvalidOperationException("Risk:Address is not set.");
 builder.Services.AddGrpcClient<RiskCheck.RiskCheckClient>(options => options.Address = new Uri(riskAddress));
 builder.Services.AddScoped<RiskChecker>();
+builder.Services.AddScoped<Reconciler>();
 
 var app = builder.Build();
 
@@ -36,5 +38,6 @@ app.UseStatusCodePages();
 app.MapHealthChecks("/health");
 app.MapAccountEndpoints();
 app.MapTransferEndpoints();
+app.MapReconciliationEndpoints();
 
 app.Run();

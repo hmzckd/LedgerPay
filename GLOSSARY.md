@@ -56,6 +56,10 @@ _Avoid_: Request id, dedup key
 The question LedgerPay asks the risk service before every deposit and transfer: may this money move? If the risk check says no, or gives no answer in time, no money moves.
 _Avoid_: Fraud check, validation
 
+**Reconciliation run**:
+One check that the ledger still holds together: all ledger entries add up to zero, every transfer of the checked day has exactly two entries that add up to zero, and no customer account is below zero. Its result is Passed or Failed.
+_Avoid_: Audit, consistency check, health check
+
 ### Events
 
 **Transfer completed**:
