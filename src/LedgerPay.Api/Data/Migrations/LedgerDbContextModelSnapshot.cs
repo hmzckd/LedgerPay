@@ -138,9 +138,15 @@ namespace LedgerPay.Api.Data.Migrations
                         .HasColumnType("date")
                         .HasColumnName("day");
 
-                    b.Property<DateTimeOffset>("FinishedAt")
+                    b.Property<DateTimeOffset?>("FinishedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("finished_at");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("kind");
 
                     b.PrimitiveCollection<List<string>>("Problems")
                         .IsRequired()
@@ -158,6 +164,10 @@ namespace LedgerPay.Api.Data.Migrations
                         .HasColumnName("status");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Day")
+                        .IsUnique()
+                        .HasFilter("kind = 'Scheduled'");
 
                     b.ToTable("reconciliation_runs", (string)null);
                 });

@@ -23,7 +23,7 @@ public static class ReconciliationEndpoints
             return Problems.ReconciliationDayInTheFuture(day);
         }
 
-        var run = await reconciler.RunAsync(day, ct);
+        var run = await reconciler.RunManuallyAsync(day, ct);
         return TypedResults.Ok(ReconciliationRunResponse.From(run));
     }
 
@@ -31,7 +31,7 @@ public static class ReconciliationEndpoints
         LedgerDbContext db, CancellationToken ct)
     {
         var run = await db.ReconciliationRuns
-            .OrderByDescending(r => r.FinishedAt)
+            .OrderByDescending(r => r.StartedAt)
             .ThenByDescending(r => r.Id)
             .FirstOrDefaultAsync(ct);
         if (run is null)

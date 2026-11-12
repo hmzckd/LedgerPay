@@ -57,7 +57,7 @@ The question LedgerPay asks the risk service before every deposit and transfer: 
 _Avoid_: Fraud check, validation
 
 **Reconciliation run**:
-One check that the ledger still holds together: all ledger entries add up to zero, every transfer of the checked day has exactly two entries that add up to zero, and no customer account is below zero. Its result is Passed or Failed.
+One check that the ledger still holds together: all ledger entries add up to zero, every transfer of the checked day has exactly two entries that add up to zero, and no customer account is below zero. Its result is Passed or Failed. One runs every night for the day before; more can be started by hand at any time.
 _Avoid_: Audit, consistency check, health check
 
 ### Events

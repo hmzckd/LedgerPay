@@ -32,6 +32,7 @@ public class LedgerPayApiFactory : WebApplicationFactory<Program>, IAsyncLifetim
         builder.UseSetting("ConnectionStrings:Ledger", _postgres.GetConnectionString());
         builder.UseSetting("ConnectionStrings:RabbitMq", _rabbitMq.GetConnectionString());
         builder.UseSetting("Outbox:RelayEnabled", "false");
+        builder.UseSetting("Reconciliation:ScheduleEnabled", "false");
         builder.ConfigureTestServices(services =>
         {
             services.RemoveAll<RiskCheck.RiskCheckClient>();

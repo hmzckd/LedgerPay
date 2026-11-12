@@ -1,5 +1,6 @@
 using LedgerPay.Api.Accounts;
 using LedgerPay.Api.Data;
+using LedgerPay.Api.Transfers;
 using Microsoft.EntityFrameworkCore;
 using static System.FormattableString;
 
@@ -9,31 +10,54 @@ public class Reconciler(LedgerDbContext db, TimeProvider clock, ILogger<Reconcil
 {
     private const int MaxListed = 10;
 
-    public async Task<ReconciliationRun> RunAsync(DateOnly day, CancellationToken ct)
+    public async Task<ReconciliationRun> RunManuallyAsync(DateOnly day, CancellationToken ct)
     {
-        var startedAt = clock.GetUtcNow();
-        var problems = new List<string>();
-
-        await CheckTheTotal(problems, ct);
-        await CheckTheTransfersOf(day, problems, ct);
-        await CheckForCustomerAccountsBelowZero(problems, ct);
-
-        var run = ReconciliationRun.Finished(day, problems, startedAt, clock.GetUtcNow());
+        var run = ReconciliationRun.Start(day, ReconciliationKind.Manual, clock.GetUtcNow());
+        await CheckAndFinish(run, ct);
         db.ReconciliationRuns.Add(run);
         await db.SaveChangesAsync(ct);
+        return run;
+    }
+
+    public async Task<ReconciliationRun?> RunScheduledAsync(DateOnly day, CancellationToken ct)
+    {
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        var run = ReconciliationRun.Start(day, ReconciliationKind.Scheduled, clock.GetUtcNow());
+        db.ReconciliationRuns.Add(run);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException e) when (e.IsUniqueViolation())
+        {
+            logger.LogInformation("{Day:O} was already reconciled by another copy of the app.", day);
+            return null;
+        }
+
+        await CheckAndFinish(run, ct);
+        await db.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
+        return run;
+    }
+
+    private async Task CheckAndFinish(ReconciliationRun run, CancellationToken ct)
+    {
+        var problems = new List<string>();
+        await CheckTheTotal(problems, ct);
+        await CheckTheTransfersOf(run.Day, problems, ct);
+        await CheckForCustomerAccountsBelowZero(problems, ct);
+        run.Finish(problems, clock.GetUtcNow());
 
         if (run.Status == ReconciliationStatus.Failed)
         {
             logger.LogError(
-                "Reconciliation of {Day:O} failed with {Count} problems: {Problems}",
-                day, problems.Count, string.Join(" ", problems));
+                "{Kind} reconciliation of {Day:O} failed with {Count} problems: {Problems}",
+                run.Kind, run.Day, problems.Count, string.Join(" ", problems));
         }
         else
         {
-            logger.LogInformation("Reconciliation of {Day:O} passed.", day);
+            logger.LogInformation("{Kind} reconciliation of {Day:O} passed.", run.Kind, run.Day);
         }
-
-        return run;
     }
 
     private async Task CheckTheTotal(List<string> problems, CancellationToken ct)

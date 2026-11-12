@@ -83,10 +83,12 @@ public class LedgerDbContext(DbContextOptions<LedgerDbContext> options) : DbCont
             run.HasKey(r => r.Id);
             run.Property(r => r.Id).HasColumnName("id");
             run.Property(r => r.Day).HasColumnName("day");
+            run.Property(r => r.Kind).HasColumnName("kind").HasConversion<string>().HasMaxLength(20);
             run.Property(r => r.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(20);
             run.Property(r => r.Problems).HasColumnName("problems");
             run.Property(r => r.StartedAt).HasColumnName("started_at");
             run.Property(r => r.FinishedAt).HasColumnName("finished_at");
+            run.HasIndex(r => r.Day).IsUnique().HasFilter("kind = 'Scheduled'");
         });
     }
 }

@@ -24,6 +24,7 @@ var riskAddress = builder.Configuration["Risk:Address"]
 builder.Services.AddGrpcClient<RiskCheck.RiskCheckClient>(options => options.Address = new Uri(riskAddress));
 builder.Services.AddScoped<RiskChecker>();
 builder.Services.AddScoped<Reconciler>();
+builder.Services.AddHostedService<NightlyReconciliation>();
 
 var app = builder.Build();
 
