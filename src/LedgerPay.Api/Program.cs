@@ -6,11 +6,16 @@ using LedgerPay.Api.Risk;
 using LedgerPay.Api.Transfers;
 using LedgerPay.Risk.V1;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using RabbitMQ.Client;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddDbContext<LedgerDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("Ledger")));
+builder.Services.AddDbContext<LedgerDbContext>(options => options.UseNpgsql(
+    builder.Configuration.GetConnectionString("Ledger"),
+    npgsql => npgsql.ConfigureDataSource(dataSource => dataSource.ConfigureTracing(QueryTracing.OnlyInsideATrace))));
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddProblemDetails();
 builder.Services.AddValidation();
@@ -25,6 +30,21 @@ builder.Services.AddGrpcClient<RiskCheck.RiskCheckClient>(options => options.Add
 builder.Services.AddScoped<RiskChecker>();
 builder.Services.AddScoped<Reconciler>();
 builder.Services.AddHostedService<NightlyReconciliation>();
+
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(resource => resource.AddService("ledgerpay-api"))
+    .WithTracing(tracing =>
+    {
+        tracing
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddNpgsql()
+            .AddSource("Grpc.Net.Client", OutboxRelay.TracingSource, RabbitMQActivitySource.PublisherSourceName);
+        if (builder.Configuration.GetValue("Tracing:ExportEnabled", true))
+        {
+            tracing.AddOtlpExporter();
+        }
+    });
 
 var app = builder.Build();
 

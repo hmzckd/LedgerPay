@@ -105,6 +105,7 @@ public class OutboxTests(LedgerPayApiFactory factory) : IAsyncLifetime
 
     public async ValueTask DisposeAsync()
     {
+        await _channel.QueueDeleteAsync(_queue);
         await _channel.DisposeAsync();
         await _connection.DisposeAsync();
     }

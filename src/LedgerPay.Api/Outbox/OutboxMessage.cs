@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using LedgerPay.Api.Transfers;
 
@@ -12,13 +13,15 @@ public class OutboxMessage
     public DateTimeOffset? SentAt { get; private set; }
     public int Attempts { get; private set; }
     public string? LastError { get; private set; }
+    public string? TraceParent { get; private set; }
 
-    private OutboxMessage(Guid id, string type, string payload, DateTimeOffset createdAt)
+    private OutboxMessage(Guid id, string type, string payload, DateTimeOffset createdAt, string? traceParent)
     {
         Id = id;
         Type = type;
         Payload = payload;
         CreatedAt = createdAt;
+        TraceParent = traceParent;
     }
 
     public static OutboxMessage ForCompletedTransfer(Transfer transfer)
@@ -27,7 +30,7 @@ public class OutboxMessage
         var completed = new TransferCompleted(
             id, transfer.Id, transfer.FromAccountId, transfer.ToAccountId, transfer.Amount, transfer.CreatedAt);
         var payload = JsonSerializer.Serialize(completed, JsonSerializerOptions.Web);
-        return new OutboxMessage(id, TransferCompleted.Type, payload, transfer.CreatedAt);
+        return new OutboxMessage(id, TransferCompleted.Type, payload, transfer.CreatedAt, Activity.Current?.Id);
     }
 
     public void MarkSent(TimeProvider clock)

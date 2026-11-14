@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using OpenTelemetry.Trace;
 using Testcontainers.PostgreSql;
 using Testcontainers.RabbitMq;
 using Xunit;
@@ -21,6 +22,8 @@ public class LedgerPayApiFactory : WebApplicationFactory<Program>, IAsyncLifetim
 
     public FakeRiskClient Risk { get; } = new();
 
+    public SpanCollector Spans { get; } = new();
+
     public async ValueTask InitializeAsync()
     {
         await Task.WhenAll(_postgres.StartAsync(), _rabbitMq.StartAsync());
@@ -33,10 +36,12 @@ public class LedgerPayApiFactory : WebApplicationFactory<Program>, IAsyncLifetim
         builder.UseSetting("ConnectionStrings:RabbitMq", _rabbitMq.GetConnectionString());
         builder.UseSetting("Outbox:RelayEnabled", "false");
         builder.UseSetting("Reconciliation:ScheduleEnabled", "false");
+        builder.UseSetting("Tracing:ExportEnabled", "false");
         builder.ConfigureTestServices(services =>
         {
             services.RemoveAll<RiskCheck.RiskCheckClient>();
             services.AddSingleton<RiskCheck.RiskCheckClient>(Risk);
+            services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.AddProcessor(Spans));
         });
     }
 

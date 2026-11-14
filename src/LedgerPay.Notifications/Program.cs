@@ -2,6 +2,10 @@ using LedgerPay.Notifications.Data;
 using LedgerPay.Notifications.Messaging;
 using LedgerPay.Notifications.Notifications;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using RabbitMQ.Client;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +15,20 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddProblemDetails();
 builder.Services.AddHealthChecks().AddDbContextCheck<NotificationsDbContext>();
 builder.Services.AddHostedService<TransferCompletedConsumer>();
+
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(resource => resource.AddService("ledgerpay-notifications"))
+    .WithTracing(tracing =>
+    {
+        tracing
+            .AddAspNetCoreInstrumentation()
+            .AddNpgsql()
+            .AddSource(RabbitMQActivitySource.SubscriberSourceName);
+        if (builder.Configuration.GetValue("Tracing:ExportEnabled", true))
+        {
+            tracing.AddOtlpExporter();
+        }
+    });
 
 var app = builder.Build();
 

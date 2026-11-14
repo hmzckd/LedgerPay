@@ -1,6 +1,8 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using OpenTelemetry.Trace;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
 using Testcontainers.PostgreSql;
@@ -18,6 +20,8 @@ public class NotificationsApiFactory : WebApplicationFactory<Program>, IAsyncLif
 
     public string RabbitMqConnectionString => _rabbitMq.GetConnectionString();
 
+    public SpanCollector Spans { get; } = new();
+
     public async ValueTask InitializeAsync()
     {
         CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("tr-TR");
@@ -30,6 +34,9 @@ public class NotificationsApiFactory : WebApplicationFactory<Program>, IAsyncLif
     {
         builder.UseSetting("ConnectionStrings:Notifications", _postgres.GetConnectionString());
         builder.UseSetting("ConnectionStrings:RabbitMq", _rabbitMq.GetConnectionString());
+        builder.UseSetting("Tracing:ExportEnabled", "false");
+        builder.ConfigureTestServices(services =>
+            services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.AddProcessor(Spans)));
     }
 
     public override async ValueTask DisposeAsync()

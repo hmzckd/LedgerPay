@@ -19,5 +19,11 @@ services:
       - "5672:5672"
       - "15672:15672"
 
+  jaeger:
+    image: jaegertracing/jaeger:2.22.0
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+
 volumes:
   postgres-data:

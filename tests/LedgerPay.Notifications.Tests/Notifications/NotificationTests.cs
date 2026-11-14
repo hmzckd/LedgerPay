@@ -93,6 +93,20 @@ public class NotificationTests(NotificationsApiFactory factory) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task A_message_is_handled_inside_the_trace_it_carries()
+    {
+        var sender = TraceParent.New();
+        var completed = NewEvent(Guid.CreateVersion7(), 4000);
+
+        await Publish(completed, sender);
+
+        var spans = await factory.Spans.WaitForTrace(sender.TraceId, "deliver transfer.completed", _ct);
+        var deliver = Assert.Single(spans, s => s.DisplayName == "deliver transfer.completed");
+        Assert.Equal(sender.SpanId, deliver.ParentSpanId);
+        Assert.Contains(spans, s => s.Source.Name == "Npgsql" && s.ParentSpanId == deliver.SpanId);
+    }
+
+    [Fact]
     public async Task An_unknown_account_has_no_notifications()
     {
         var notifications = await _client.GetFromJsonAsync<List<NotificationResponse>>(
@@ -114,12 +128,17 @@ public class NotificationTests(NotificationsApiFactory factory) : IAsyncLifetime
             Guid.CreateVersion7(), transferId, fromAccountId, Guid.CreateVersion7(), amount, DateTimeOffset.UtcNow);
     }
 
-    private Task Publish(TransferCompletedEvent completed) =>
-        PublishRaw(JsonSerializer.Serialize(completed, JsonSerializerOptions.Web), completed.EventId.ToString());
+    private Task Publish(TransferCompletedEvent completed, TraceParent? trace = null) =>
+        PublishRaw(JsonSerializer.Serialize(completed, JsonSerializerOptions.Web), completed.EventId.ToString(), trace);
 
-    private async Task PublishRaw(string body, string messageId)
+    private async Task PublishRaw(string body, string messageId, TraceParent? trace = null)
     {
         var properties = new BasicProperties { MessageId = messageId, DeliveryMode = DeliveryModes.Persistent };
+        if (trace is not null)
+        {
+            properties.Headers = new Dictionary<string, object?> { ["traceparent"] = trace.ToString() };
+        }
+
         await _channel.BasicPublishAsync(
             "ledgerpay.events", "transfer.completed", mandatory: false, properties, Encoding.UTF8.GetBytes(body), _ct);
     }

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using LedgerPay.Api.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,7 +11,10 @@ public class OutboxRelay(
     TimeProvider clock,
     ILogger<OutboxRelay> logger) : BackgroundService
 {
+    public const string TracingSource = "LedgerPay.Api.Outbox";
+
     private const int BatchSize = 10;
+    private static readonly ActivitySource Tracing = new(TracingSource);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -52,6 +56,8 @@ public class OutboxRelay(
         var sent = 0;
         foreach (var message in messages)
         {
+            var request = ActivityContext.TryParse(message.TraceParent, null, out var parent) ? parent : default;
+            using var span = Tracing.StartActivity("send outbox message", ActivityKind.Internal, request);
             try
             {
                 await publisher.PublishAsync(message, ct);
@@ -61,6 +67,7 @@ public class OutboxRelay(
             catch (Exception e) when (!ct.IsCancellationRequested)
             {
                 message.MarkFailed(e.Message);
+                span?.SetStatus(ActivityStatusCode.Error, e.Message);
                 logger.LogWarning("Could not publish outbox message {MessageId}: {Error}", message.Id, e.Message);
                 break;
             }

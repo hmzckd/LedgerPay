@@ -74,6 +74,7 @@ public class LedgerDbContext(DbContextOptions<LedgerDbContext> options) : DbCont
             message.Property(m => m.SentAt).HasColumnName("sent_at");
             message.Property(m => m.Attempts).HasColumnName("attempts");
             message.Property(m => m.LastError).HasColumnName("last_error");
+            message.Property(m => m.TraceParent).HasColumnName("trace_parent");
             message.HasIndex(m => new { m.CreatedAt, m.Id }).HasFilter("sent_at IS NULL");
         });
 
