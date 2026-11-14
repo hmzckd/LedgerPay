@@ -9,6 +9,11 @@ services:
       - "5435:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ledgerpay -d ledgerpay"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
 
   rabbitmq:
     image: rabbitmq:4.2-management
@@ -18,12 +23,61 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
 
   jaeger:
     image: jaegertracing/jaeger:2.22.0
     ports:
       - "16686:16686"
       - "4317:4317"
+
+  ledgerpay-risk:
+    build:
+      context: .
+      dockerfile: src/LedgerPay.Risk/Dockerfile
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+    ports:
+      - "5082:8080"
+
+  ledgerpay-api:
+    build:
+      context: .
+      dockerfile: src/LedgerPay.Api/Dockerfile
+    environment:
+      ConnectionStrings__Ledger: Host=postgres;Port=5432;Database=ledgerpay;Username=ledgerpay;Password=ledgerpay
+      ConnectionStrings__RabbitMq: amqp://ledgerpay:ledgerpay@rabbitmq:5672/
+      Risk__Address: http://ledgerpay-risk:8080
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+    ports:
+      - "5080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      ledgerpay-risk:
+        condition: service_started
+
+  ledgerpay-notifications:
+    build:
+      context: .
+      dockerfile: src/LedgerPay.Notifications/Dockerfile
+    environment:
+      ConnectionStrings__Notifications: Host=postgres;Port=5432;Database=notifications;Username=ledgerpay;Password=ledgerpay
+      ConnectionStrings__RabbitMq: amqp://ledgerpay:ledgerpay@rabbitmq:5672/
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+    ports:
+      - "5081:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
 
 volumes:
   postgres-data:
